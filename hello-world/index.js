@@ -1,6 +1,10 @@
 var express = require('express');
 var app = express();
 
+// app.use(function (req, res, next) {
+//   res.send('use');
+// });
+
 app.get('/', function (req, res) {
   res.send('Hello World!');
 });
