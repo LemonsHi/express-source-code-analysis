@@ -163,3 +163,124 @@ app.listen = function listen() {
   return server.listen.apply(server, arguments);
 };
 ```
+
+当服务器实例建立完成后，便会执行 this -> app 函数
+
+1. 执行 `express.js` 中的 `createApplication` 函数
+
+```javascript
+// express.js
+function createApplication() {
+  var app = function(req, res, next) {
+    // app.handle 函数，为 appliction.js 中的 handle 函数
+    app.handle(req, res, next);
+  };
+
+  // ...
+}
+```
+
+2. 执行 `application.js` 中的 `handle` 函数
+
+```javascript
+// application.js
+app.handle = function handle(req, res, callback) {
+  var router = this._router;
+
+  // final handler
+  var done = callback || finalhandler(req, res, {
+    env: this.get('env'),
+    onerror: logerror.bind(this)
+  });
+
+  // ...
+
+  // 实质上是调用 router/index.js 中的 handle 函数
+  router.handle(req, res, done);
+}
+```
+
+3. 执行 `router/index.js` 中的 `handle` 函数
+
+```javascript
+proto.handle = function handle(req, res, out) {
+  var self = this;
+
+  // ...
+
+  // stack 中 layer 编号
+  var idx = 0;
+
+  // ...
+
+  // 取出 router 中的 stack
+  var stack = self.stack;
+
+  // ...
+
+  next();
+
+  function next(err) {
+    // ...
+
+    // 边界判断
+    if (idx >= stack.length) {
+      setImmediate(done, layerError);
+      return;
+    }
+
+    // 获取路径
+    var path = getPathname(req);
+
+    // ...
+
+    while (match !== true && idx < stack.length) {
+      // 获取第 idx 的 layer
+      layer = stack[idx++];
+      // 匹配对应的 layer
+      match = matchLayer(layer, path);
+      route = layer.route;
+
+      // ...
+
+      // 获取请求方法
+      var method = req.method;
+      // 是否有这个请求的方法
+      var has_method = route._handles_method(method);
+
+      // ...
+
+    // this should be done for the layer
+    self.process_params(layer, paramcalled, req, res, function (err) {
+      //...
+
+      if (route) {
+        // 执行回调函数
+        return layer.handle_request(req, res, next);
+      }
+
+      // ...
+    });
+  }
+}
+```
+
+4. 执行 `handle_request` 函数
+
+```javascript
+Layer.prototype.handle_request = function handle(req, res, next) {
+  var fn = this.handle;
+
+  if (fn.length > 3) {
+    // not a standard request handler
+    return next();
+  }
+
+  try {
+    // 执行回调函数
+    fn(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+}
+```
