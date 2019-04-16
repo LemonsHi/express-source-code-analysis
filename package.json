@@ -1,10 +1,10 @@
 {
   "name": "index.js",
   "version": "1.0.0",
-  "description": "hello world",
+  "description": "express 源码解析",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node express-router/index.js"
   },
   "author": "",
   "license": "ISC",
