@@ -14,12 +14,13 @@ user.use(function(req,res,next){
   next();
 });
 user.use('/2',function(req,res,next){
-  res.end('2');
+  console.log('user/2');
   next();
 });
 app.use('/user',user);
-app.use(function(err,req,res,next){
-  res.end('catch '+err);
+app.use(function(req,res,next){
+  console.log('end');
+  // res.end('catch '+err);
 });
 app.listen(3000, function () {
   console.log('Example app listening on port 3000!');

@@ -96,3 +96,9 @@ proto.handle = function handle(req, res, out) {
 `index.js` 中，通过 `next` 方法，使得 `idx` 增长，从而遍历 `Router.stack` 数组，执行相应的 `layer.handle` 方法（或调函数）。
 
 > **注意：** `Router.stack` 数组，通过 `router.handle` 中的 `next` 方法遍历数组；`Route.stack` 数组，通过 `route.dispath` 中的 `next` 方法遍历数组。
+
+<div align=center>
+
+![](https://user-gold-cdn.xitu.io/2018/3/12/16217f555f97e14c?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+
+</div>
