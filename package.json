@@ -4,7 +4,7 @@
   "description": "express 源码解析",
   "main": "index.js",
   "scripts": {
-    "start": "node express-router/index.js"
+    "start": "node express-middleware/index.js"
   },
   "author": "",
   "license": "ISC",
