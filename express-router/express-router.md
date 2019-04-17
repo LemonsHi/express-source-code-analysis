@@ -37,8 +37,8 @@ methods.forEach(function(method){
 ```
 
 在调用 app.listen 时，通过两个 idx 来，来执行回调。
-1. 第一个 idx 控制 Router.stack。通过匹配 url 找到指定的 layer 对象，然后通过回调函数执行 next 方法，进入 route.dispath ，从而进入第二个 idx 控制。
-2. 第二个 idx 控制 Route.stack。依次执行 stack 中的回调函数。
+1. 第一个 `idx` 控制 `Router.stack`。通过匹配 `url` 找到指定的 `layer` 对象。然后通过回调函数执行 `next` 方法，进入 `route.dispath` ，从而进入第二个 `idx` 控制。
+2. 第二个 `idx` 控制 `Route.stack`。依次执行 `stack` 中的 `layer` 对象中的 `handle` 函数（回调函数）。
 
 ```javascript
 proto.route = function route(path) {
