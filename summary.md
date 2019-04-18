@@ -1,4 +1,4 @@
-## 2019-04-18
+## 2019-04-18 -2019-04-19
 
 简单分析 express 源码，从 express 框架整体出发，分别针对 express 框架的两个阶段（注册阶段和执行阶段）详细分析。
 
@@ -126,3 +126,55 @@ proto.use = function use(fn) {
 ![](https://user-gold-cdn.xitu.io/2018/3/24/162541b0548860b4?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
 
 </div>
+
+#### 2 express 框架的执行阶段
+
+express 通过执行 app.listen() 开始进入执行阶段。
+
+```javascript
+app.listen = function listen() {
+  var server = http.createServer(this);
+  return server.listen.apply(server, arguments);
+};
+```
+
+从上面代码上分析，主要有以下两点：
+
+1. app.listen 实质是调用 http.createServer 这个方法。
+2. express 在调用 http.createServer 方法时，以 express 返回的 app 函数作为 requestListener 参数传入。
+
+在成功开启服务器后，便会执行 express 返回的 app 函数，其代码如下：
+
+```javascript
+var app = function(req, res, next) {
+  app.handle(req, res, next);
+};
+```
+
+app 函数主要是执行 app.handle 方法，app.handle 方法实质是执行 router.handle 方法
+
+```javascript
+app.handle = function handle(req, res, callback) {
+  // ...
+  // ahh.handle 实质是执行 router.handle
+  router.handle(req, res, done);
+};
+```
+
+
+
+express 整体执行流程，如下：
+
+                          app function
+                               |
+                               |
+                           app.handle
+                               |
+                               |
+                         router.handle   —— —— ——
+                            /     \              |
+                           /       \             |
+                route.dispath  layer.handle —— ——
+                      |
+                      |
+                 layer.handle
