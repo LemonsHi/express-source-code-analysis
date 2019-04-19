@@ -1,8 +1,8 @@
-## 2019-04-18 -2019-04-19
+# 2019-04-18 -- 2019-04-19
 
 简单分析 express 源码，从 express 框架整体出发，分别针对 express 框架的两个阶段（注册阶段和执行阶段）详细分析。
 
-### express 框架整体分析
+## express 框架整体分析
 
 express 框架可以分为两阶段：
 
@@ -27,11 +27,11 @@ app.listen(3000, function () {
 
 简单解释上面的例子：express 首先通过 app.get() 将需要执行的业务逻辑注册进 Router.stack 中，然后通过 app.listen() 执行相匹配的业务逻辑。
 
-#### 1 express 框架的注册阶段
+### 1 express 框架的注册阶段
 
 在 express 中可以将注册类型分为两类：route layer 对象和 middleware layer 对象。
 
-##### 1.1 route layer
+#### 1.1 route layer
 
 route layer 对象主要是通过 get、post 和 put 等方法所注册。注册过程如下源码所示。
 
@@ -75,7 +75,7 @@ app.get('/user',function(req,res,next){
 
 对于第 2 点，在注册 route layer 对象的时候，其回调函数不止一个时，便需要都注册，express 采用一个 route.stack 数组来存储 layer 对象（该对象上的 handle 属性绑定了需要执行的业务逻辑），并通过类似于管道的形式执行业务逻辑。因此，express 设计了一个 dispath 方法，并在内部实现了 next 方法，通过回调函数调用 next 方法，执行下一个回调函数。
 
-##### 1.2 middleware layer
+#### 1.2 middleware layer
 
 middleware layer 对象主要是通过 use 注册。
 
@@ -117,13 +117,13 @@ proto.use = function use(fn) {
 
 针对第 2 点，通过中间件的特性（中间件也处于系统与应用的中间层，去控制与管理用户的操作等），因此，layer.handle 即为用户的注册的中间件业务逻辑。
 
-##### 1.3 Router.stack
+#### 1.3 Router.stack
 
 综合以上所述，Route.stack 结构如下所示：
 
 <div align=center>
 
-![](https://user-gold-cdn.xitu.io/2018/3/24/162541b0548860b4?imageView2/0/w/1280/h/960/format/webp/ignore-error/1)
+![](./express-router.png)
 
 </div>
 
@@ -161,9 +161,92 @@ app.handle = function handle(req, res, callback) {
 };
 ```
 
+接下来看下分析下 router.handle 方法
 
+```javascript
+proto.handle = function handle(req, res, out) {
+  // ...
+  // router.stack 中的 layer 对象编号
+  var idx = 0;
+  // ...
+  var stack = self.stack;
+  // ...
+  // 开始第一个 layer 对象
+  next();
+  function next(err) {
+    // ...
+    var layer;
+    var match;
+    var route;
+    // 找到路径匹配的 layer 对象
+    while (match !== true && idx < stack.length) {
+      layer = stack[idx++];
+      match = matchLayer(layer, path);
+      route = layer.route;
+      // ...
+    }
+    // ...
+    self.process_params(layer, paramcalled, req, res, function (err) {
+      if (err) {
+        return next(layerError || err);
+      }
 
-express 整体执行流程，如下：
+      if (route) {
+        // 执行 route layer 对象
+        // 实质执行的是 layer.handle 函数
+        // 在 router layer 对象中是 route.dispatch 函数
+        return layer.handle_request(req, res, next);
+      }
+
+      trim_prefix(layer, layerError, layerPath, path);
+    });
+  }
+
+  function trim_prefix(layer, layerError, layerPath, path) {
+    // ...
+    // 执行 middleware layer 对象
+    if (layerError) {
+      layer.handle_error(layerError, req, res, next);
+    } else {
+      layer.handle_request(req, res, next);
+    }
+  }
+};
+```
+
+其中有几个关键的部分：
+
+1. match = matchLayer(layer, path);
+2. layer.handle_request(req, res, next);
+3. trim_prefix(layer, layerError, layerPath, path);
+
+针对第 1 点，matchLayer 实质上是调用 layer.match 函数，用来匹配 url。
+
+针对第 2 点，layer.handle_request 实质是执行 layer.handle 函数，因此，针对 route layer 对象实质执行的是 route.dispatch 方法，而 middleware layer 对象执行的是 app.use(path, fn) 中的 fn 回调函数。
+
+针对第 3 点，trim_prefix 函数的执行的条件是，如果不是 route layer 对象，便会执行该函数即为 middleware layer 对象的 layer.handle。
+
+layer.handle_request 代码如下：
+
+```javascript
+Layer.prototype.handle_request = function handle(req, res, next) {
+  // 实质执行的是 layer.handle
+  var fn = this.handle;
+
+  if (fn.length > 3) {
+    return next();
+  }
+
+  try {
+    fn(req, res, next);
+  } catch (err) {
+    next(err);
+  }
+};
+
+```
+
+总结下 express 整体执行流程，如下：
 
                           app function
                                |
@@ -175,6 +258,9 @@ express 整体执行流程，如下：
                             /     \              |
                            /       \             |
                 route.dispath  layer.handle —— ——
+                      |             |
+                      |             |
+                 layer.handle      fn
                       |
                       |
-                 layer.handle
+                     fn
